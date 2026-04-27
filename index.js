@@ -36,14 +36,6 @@ const ticketOwners = new Map();
 
 // ================= ROLES =================
 
-const posicionesRoles = {
-  "Izquierda": "1498418722673655848",
-  "Hold Derecha": "1498418768848752801",
-  "Piazza": "1498418827455627366",
-  "Push": "1498418867565891784",
-  "Hold Medio": "1498418899346002020"
-};
-
 const roles = {
   '⬅️': "1498418722673655848",
   '➡️': "1498418768848752801",
@@ -52,9 +44,17 @@ const roles = {
   '🎯': "1498418899346002020"
 };
 
+const posicionesRoles = {
+  "Izquierda": roles['⬅️'],
+  "Hold Derecha": roles['➡️'],
+  "Piazza": roles['🏛️'],
+  "Push": roles['⚡'],
+  "Hold Medio": roles['🎯']
+};
+
 // ================= READY =================
 
-client.once('clientReady', () => {
+client.once('ready', () => {
   console.log(`✅ Bot listo como ${client.user.tag}`);
 });
 
@@ -63,9 +63,8 @@ client.once('clientReady', () => {
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
-  // PANEL TICKETS
+  // PANEL
   if (message.content === '!panel') {
-
     const embed = new EmbedBuilder()
       .setTitle('**FORZA COMMUNITY**')
       .setImage('https://media.discordapp.net/attachments/1483568796013953175/1492216666690687057/image0.jpg')
@@ -78,84 +77,38 @@ client.on('messageCreate', async (message) => {
         .setStyle(ButtonStyle.Primary)
     );
 
-    return message.channel.send({
-      embeds: [embed],
-      components: [row]
-    });
+    return message.channel.send({ embeds: [embed], components: [row] });
   }
 
-  // RENAME STAFF
-  if (message.content.startsWith('!rename')) {
-
-    const staffRole = message.guild.roles.cache.find(
-      r => r.name === 'Encargado Tickets'
-    );
-
-    if (!staffRole || !message.member.roles.cache.has(staffRole.id)) {
-      return message.reply('❌ Solo el staff puede usar esto.');
-    }
-
-    if (!message.channel.name.startsWith('🎫-')) {
-      return message.reply('Solo en tickets.');
-    }
-
-    const args = message.content.split(' ').slice(1);
-    const newName = args.join('-');
-
-    if (!newName) {
-      return message.reply('Ejemplo: !rename soporte');
-    }
-
-    await message.channel.setName(`🎫-${newName}`);
-    message.channel.send(`✏️ Nombre cambiado a: 🎫-${newName}`);
-  }
-
-  // ================= PANEL POSICIONES =================
+  // POSIS
   if (message.content === '!posis') {
-
     if (message.channel.id !== config.posis.channelId) {
       const aviso = await message.reply('❌ Canal incorrecto.');
-
       setTimeout(() => {
         aviso.delete().catch(() => {});
         message.delete().catch(() => {});
       }, 10000);
-
       return;
     }
 
-    const msg = await message.channel.send(
-`📌 **Selecciona tu posición**
+    const msg = await message.channel.send(`📌 **Selecciona tu posición**`);
 
-⬅️ Izquierda  
-➡️ Hold Derecha  
-🏛️ Piazza  
-⚡ Push  
-🎯 Hold Medio`
-    );
-
-    await msg.react('⬅️');
-    await msg.react('➡️');
-    await msg.react('🏛️');
-    await msg.react('⚡');
-    await msg.react('🎯');
+    for (const emoji of Object.keys(roles)) {
+      await msg.react(emoji);
+    }
 
     config.posis.messageId = msg.id;
     saveConfig();
   }
 
-  // ================= VER POSICIONES =================
+  // VER POSICIONES
   if (message.content === '!posiciones') {
-
     if (message.channel.id !== config.posiciones.channelId) {
-
       const aviso = await message.reply('❌ Este comando no va aquí.');
-
       setTimeout(() => {
         aviso.delete().catch(() => {});
         message.delete().catch(() => {});
       }, 10000);
-
       return;
     }
 
@@ -164,7 +117,6 @@ client.on('messageCreate', async (message) => {
     for (const [nombre, roleId] of Object.entries(posicionesRoles)) {
       const role = message.guild.roles.cache.get(roleId);
       const miembros = role ? role.members.map(m => `<@${m.id}>`) : [];
-
       texto += `**${nombre}:** ${miembros.length ? miembros.join(', ') : 'Nadie'}\n\n`;
     }
 
@@ -177,8 +129,9 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-// ================= REACCIONES =================
+// ================= AUTOROLES =================
 
+// ➕ Añadir rol (permite múltiples)
 client.on('messageReactionAdd', async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) await reaction.fetch();
@@ -189,9 +142,13 @@ client.on('messageReactionAdd', async (reaction, user) => {
   if (!roleId) return;
 
   const member = await reaction.message.guild.members.fetch(user.id);
-  await member.roles.add(roleId).catch(console.error);
+
+  if (!member.roles.cache.has(roleId)) {
+    await member.roles.add(roleId).catch(console.error);
+  }
 });
 
+// ➖ Quitar rol
 client.on('messageReactionRemove', async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) await reaction.fetch();
@@ -212,34 +169,24 @@ client.on('interactionCreate', async (interaction) => {
 
   const logChannel = interaction.guild.channels.cache.get(config.logChannelId);
 
-  // CREAR TICKET
+  // CREAR
   if (interaction.customId === 'crear_ticket') {
 
-  // 🔒 Comprobar si ya tiene ticket abierto
-  const existing = interaction.guild.channels.cache.find(
-    c => c.name === `🎫-${interaction.user.username}`
-  );
+    const existing = interaction.guild.channels.cache.find(
+      c => c.name === `🎫-${interaction.user.username}`
+    );
 
-  if (existing) {
-    return interaction.reply({
-      content: `❌ Ya tienes un ticket abierto: ${existing}`,
-      ephemeral: true
-    });
-  }
-
-    const category = interaction.guild.channels.cache.get(config.id_categoria);
-
-    if (!category) {
-      console.log("❌ Categoría no encontrada:", config.id_categoria);
-      return interaction.reply({ content: 'Error: categoría no encontrada.', ephemeral: true });
+    if (existing) {
+      return interaction.reply({
+        content: `❌ Ya tienes un ticket abierto: ${existing}`,
+        ephemeral: true
+      });
     }
 
-    const name = `🎫-${interaction.user.username}`;
-
     const channel = await interaction.guild.channels.create({
-      name,
+      name: `🎫-${interaction.user.username}`,
       type: ChannelType.GuildText,
-      parent: category.id,
+      parent: config.id_categoria,
       permissionOverwrites: [
         { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
         {
@@ -254,7 +201,7 @@ client.on('interactionCreate', async (interaction) => {
 
     ticketOwners.set(channel.id, interaction.user.id);
 
-    const closeBtn = new ActionRowBuilder().addComponents(
+    const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('cerrar_ticket')
         .setLabel('❌ Cerrar Ticket')
@@ -263,21 +210,19 @@ client.on('interactionCreate', async (interaction) => {
 
     const embed = new EmbedBuilder()
       .setTitle('🎫 Ticket Abierto')
-      .setDescription(
-        config.ticket.mensaje.replace('{user}', `${interaction.user}`)
-      )
+      .setDescription(config.ticket.mensaje)
       .setColor(0x000000);
 
     await channel.send({
       content: `👋 ${interaction.user}`,
       embeds: [embed],
-      components: [closeBtn]
+      components: [row]
     });
 
     interaction.reply({ content: `Ticket creado: ${channel}`, ephemeral: true });
   }
 
-  // CERRAR TICKET
+  // CERRAR
   if (interaction.customId === 'cerrar_ticket') {
 
     await interaction.reply('Cerrando ticket...');
@@ -287,22 +232,16 @@ client.on('interactionCreate', async (interaction) => {
     const ownerId = ticketOwners.get(interaction.channel.id);
     const ownerUser = await client.users.fetch(ownerId).catch(() => null);
 
-    const transcriptContent = [
-      `===== TRANSCRIPCIÓN =====`,
-      `👤 Creador: ${ownerUser ? ownerUser.tag : 'Desconocido'}`,
-      `🔒 Cerrado por: ${interaction.user.tag}`,
-      `📅 Fecha: ${new Date().toLocaleString()}`,
-      `=========================\n`,
+    const transcript = [
+      `👤 ${ownerUser?.tag}`,
+      `🔒 ${interaction.user.tag}`,
       ...messages.reverse().map(m => `${m.author.tag}: ${m.content}`)
     ].join('\n');
 
-    if (!logChannel) {
-      console.log("❌ Canal logs NO encontrado:", config.logChannelId);
-    } else {
+    if (logChannel) {
       await logChannel.send({
-        content: `🔴 Ticket cerrado`,
         files: [{
-          attachment: Buffer.from(transcriptContent, 'utf-8'),
+          attachment: Buffer.from(transcript),
           name: `transcript-${interaction.channel.name}.txt`
         }]
       });
