@@ -74,7 +74,7 @@ client.on('messageCreate', async (message) => {
       new ButtonBuilder()
         .setCustomId('crear_ticket')
         .setLabel('🎫 Crear Ticket')
-        .setStyle(ButtonStyle.Primary)
+        .setStyle(ButtonStyle.Secondary)
     );
 
     return message.channel.send({ embeds: [embed], components: [row] });
