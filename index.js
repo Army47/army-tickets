@@ -215,6 +215,18 @@ client.on('interactionCreate', async (interaction) => {
   // CREAR TICKET
   if (interaction.customId === 'crear_ticket') {
 
+  // 🔒 Comprobar si ya tiene ticket abierto
+  const existing = interaction.guild.channels.cache.find(
+    c => c.name === `🎫-${interaction.user.username}`
+  );
+
+  if (existing) {
+    return interaction.reply({
+      content: `❌ Ya tienes un ticket abierto: ${existing}`,
+      ephemeral: true
+    });
+  }
+
     const category = interaction.guild.channels.cache.get(config.id_categoria);
 
     if (!category) {
