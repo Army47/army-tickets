@@ -1,0 +1,15 @@
+{
+  "panel": {
+    "mensaje": "🎫 **Sistema de Tickets**"
+  },
+  "ticket": {
+    "mensaje": "📌  Rellena la información solicitada.\n\n - Edad:\n- Horas de Steam (Captura):\n- K/D (Captura):\n- ¿En qué bandas has estado?\n- ¿Has utilizado/llevado cheats alguna vez?\n- Clips o HG (Mínimo 5 clips o 1 HG):\n\n❌ TICKET CERRADO = RECHAZADO"
+  },
+  "posis": {
+    "channelId": "1492189928505872504",
+    "messageId": "1498415373115195523"
+  },
+  "posiciones": {
+    "channelId": "1492189936361803986"
+  }
+}
