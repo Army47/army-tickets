@@ -56,7 +56,7 @@ const roles = {
 
 // ================= READY =================
 
-client.once('ready', () => {
+client.once('clientReady', () => {
   console.log(`✅ Bot listo como ${client.user.tag}`);
 });
 
@@ -221,7 +221,7 @@ client.on('messageReactionRemove', async (reaction, user) => {
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isButton()) return;
 
-  const logChannel = interaction.guild.channels.cache.get(process.env.LOG_CHANNEL_ID);
+  const logChannel = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
 
   if (interaction.customId === 'crear_ticket') {
 
@@ -230,7 +230,7 @@ client.on('interactionCreate', async (interaction) => {
     const channel = await interaction.guild.channels.create({
       name,
       type: ChannelType.GuildText,
-      parent: process.env.CATEGORY_ID,
+      parent: config.id_categoria,
       permissionOverwrites: [
         { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
         {
@@ -268,7 +268,7 @@ client.on('interactionCreate', async (interaction) => {
   if (interaction.customId === 'cerrar_ticket') {
   await interaction.reply('Cerrando ticket...');
 
-  const logChannel = interaction.guild.channels.cache.get(process.env.LOG_CHANNEL_ID);
+  const logChannel = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
 
   const messages = await interaction.channel.messages.fetch({ limit: 100 });
 

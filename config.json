@@ -5,6 +5,8 @@
   "ticket": {
     "mensaje": "📌  Rellena la información solicitada.\n\n - Edad:\n- Horas de Steam (Captura):\n- K/D (Captura):\n- ¿En qué bandas has estado?\n- ¿Has utilizado/llevado cheats alguna vez?\n- Clips o HG (Mínimo 5 clips o 1 HG):\n\n❌ TICKET CERRADO = RECHAZADO"
   },
+  "id_categoria": "1492189788323708959",
+  "logChannelId": "1492189994180284436",
   "posis": {
     "channelId": "1492189928505872504",
     "messageId": "1498415373115195523"
