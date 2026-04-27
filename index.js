@@ -91,7 +91,15 @@ client.on('messageCreate', async (message) => {
       return;
     }
 
-    const msg = await message.channel.send(`📌 **Selecciona tu posición**`);
+    const msg = await message.channel.send(
+`📌 **Selecciona tu posición**
+
+⬅️ Izquierda  
+➡️ Hold Derecha  
+🏛️ Piazza  
+⚡ Push  
+🎯 Hold Medio`
+);
 
     for (const emoji of Object.keys(roles)) {
       await msg.react(emoji);
