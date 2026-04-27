@@ -34,7 +34,6 @@ const client = new Client({
 
 const ticketOwners = new Map();
 
-
 // ================= ROLES =================
 
 const posicionesRoles = {
@@ -53,13 +52,11 @@ const roles = {
   '🎯': "1498418899346002020"
 };
 
-
 // ================= READY =================
 
 client.once('clientReady', () => {
   console.log(`✅ Bot listo como ${client.user.tag}`);
 });
-
 
 // ================= COMANDOS =================
 
@@ -69,24 +66,23 @@ client.on('messageCreate', async (message) => {
   // PANEL TICKETS
   if (message.content === '!panel') {
 
-  const embed = new EmbedBuilder()
-    .setTitle('**FORZA COMMUNITY**')
-    .setImage('https://media.discordapp.net/attachments/1483568796013953175/1492216666690687057/image0.jpg')
-    .setColor(0x000000);
+    const embed = new EmbedBuilder()
+      .setTitle('**FORZA COMMUNITY**')
+      .setImage('https://media.discordapp.net/attachments/1483568796013953175/1492216666690687057/image0.jpg')
+      .setColor(0x000000);
 
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('crear_ticket')
-      .setLabel('🎫 Crear Ticket')
-      .setStyle(ButtonStyle.Primary)
-  );
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('crear_ticket')
+        .setLabel('🎫 Crear Ticket')
+        .setStyle(ButtonStyle.Primary)
+    );
 
-  await message.channel.send({
-    embeds: [embed],
-    components: [row]
-  });
-
-}
+    return message.channel.send({
+      embeds: [embed],
+      components: [row]
+    });
+  }
 
   // RENAME STAFF
   if (message.content.startsWith('!rename')) {
@@ -118,16 +114,16 @@ client.on('messageCreate', async (message) => {
   if (message.content === '!posis') {
 
     if (message.channel.id !== config.posis.channelId) {
+      const aviso = await message.reply('❌ Canal incorrecto.');
 
-  const aviso = await message.reply('❌ Canal incorrecto.');
+      setTimeout(() => {
+        aviso.delete().catch(() => {});
+        message.delete().catch(() => {});
+      }, 10000);
 
-  setTimeout(() => {
-    aviso.delete().catch(() => {});
-    message.delete().catch(() => {});
-  }, 10000);
+      return;
+    }
 
-  return;
-}
     const msg = await message.channel.send(
 `📌 **Selecciona tu posición**
 
@@ -144,7 +140,6 @@ client.on('messageCreate', async (message) => {
     await msg.react('⚡');
     await msg.react('🎯');
 
-    // guardar ID automático
     config.posis.messageId = msg.id;
     saveConfig();
   }
@@ -152,17 +147,17 @@ client.on('messageCreate', async (message) => {
   // ================= VER POSICIONES =================
   if (message.content === '!posiciones') {
 
-  if (message.channel.id !== config.posiciones.channelId) {
+    if (message.channel.id !== config.posiciones.channelId) {
 
-  const aviso = await message.reply('❌ Este comando no va aquí.');
+      const aviso = await message.reply('❌ Este comando no va aquí.');
 
-  setTimeout(() => {
-    aviso.delete().catch(() => {});
-    message.delete().catch(() => {});
-  }, 10000);
+      setTimeout(() => {
+        aviso.delete().catch(() => {});
+        message.delete().catch(() => {});
+      }, 10000);
 
-  return;
-}
+      return;
+    }
 
     let texto = '📊 **Posiciones actuales**\n\n';
 
@@ -170,9 +165,7 @@ client.on('messageCreate', async (message) => {
       const role = message.guild.roles.cache.get(roleId);
       const miembros = role ? role.members.map(m => `<@${m.id}>`) : [];
 
-      texto += `**${nombre}:** ${
-        miembros.length ? miembros.join(', ') : 'Nadie'
-      }\n\n`;
+      texto += `**${nombre}:** ${miembros.length ? miembros.join(', ') : 'Nadie'}\n\n`;
     }
 
     const msg = await message.reply(texto);
@@ -184,10 +177,8 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-
 // ================= REACCIONES =================
 
-// AÑADIR ROL
 client.on('messageReactionAdd', async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) await reaction.fetch();
@@ -201,7 +192,6 @@ client.on('messageReactionAdd', async (reaction, user) => {
   await member.roles.add(roleId).catch(console.error);
 });
 
-// QUITAR ROL
 client.on('messageReactionRemove', async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) await reaction.fetch();
@@ -215,27 +205,37 @@ client.on('messageReactionRemove', async (reaction, user) => {
   await member.roles.remove(roleId).catch(console.error);
 });
 
-
 // ================= TICKETS =================
 
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isButton()) return;
 
-  const logChannel = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
+  const logChannel = interaction.guild.channels.cache.get(config.logChannelId);
 
+  // CREAR TICKET
   if (interaction.customId === 'crear_ticket') {
+
+    const category = interaction.guild.channels.cache.get(config.id_categoria);
+
+    if (!category) {
+      console.log("❌ Categoría no encontrada:", config.id_categoria);
+      return interaction.reply({ content: 'Error: categoría no encontrada.', ephemeral: true });
+    }
 
     const name = `🎫-${interaction.user.username}`;
 
     const channel = await interaction.guild.channels.create({
       name,
       type: ChannelType.GuildText,
-      parent: config.id_categoria,
+      parent: category.id,
       permissionOverwrites: [
         { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
         {
           id: interaction.user.id,
-          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
+          allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages
+          ]
         }
       ]
     });
@@ -252,8 +252,8 @@ client.on('interactionCreate', async (interaction) => {
     const embed = new EmbedBuilder()
       .setTitle('🎫 Ticket Abierto')
       .setDescription(
-  config.ticket.mensaje.replace('{user}', `${interaction.user}`)
-)
+        config.ticket.mensaje.replace('{user}', `${interaction.user}`)
+      )
       .setColor(0x000000);
 
     await channel.send({
@@ -265,43 +265,43 @@ client.on('interactionCreate', async (interaction) => {
     interaction.reply({ content: `Ticket creado: ${channel}`, ephemeral: true });
   }
 
+  // CERRAR TICKET
   if (interaction.customId === 'cerrar_ticket') {
-  await interaction.reply('Cerrando ticket...');
 
-  const logChannel = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
+    await interaction.reply('Cerrando ticket...');
 
-  const messages = await interaction.channel.messages.fetch({ limit: 100 });
+    const messages = await interaction.channel.messages.fetch({ limit: 100 });
 
-  const ownerId = ticketOwners.get(interaction.channel.id);
-  const ownerUser = await client.users.fetch(ownerId).catch(() => null);
+    const ownerId = ticketOwners.get(interaction.channel.id);
+    const ownerUser = await client.users.fetch(ownerId).catch(() => null);
 
-  const transcriptContent = [
-    `===== TRANSCRIPCIÓN =====`,
-    `👤 Creador: ${ownerUser ? ownerUser.tag : 'Desconocido'}`,
-    `🔒 Cerrado por: ${interaction.user.tag}`,
-    `📅 Fecha: ${new Date().toLocaleString()}`,
-    `=========================\n`,
-    ...messages.reverse().map(m => `${m.author.tag}: ${m.content}`)
-  ].join('\n');
+    const transcriptContent = [
+      `===== TRANSCRIPCIÓN =====`,
+      `👤 Creador: ${ownerUser ? ownerUser.tag : 'Desconocido'}`,
+      `🔒 Cerrado por: ${interaction.user.tag}`,
+      `📅 Fecha: ${new Date().toLocaleString()}`,
+      `=========================\n`,
+      ...messages.reverse().map(m => `${m.author.tag}: ${m.content}`)
+    ].join('\n');
 
-  if (!logChannel) {
-    console.log("❌ LOG_CHANNEL_ID no encontrado");
-  } else {
-    await logChannel.send({
-      content: `🔴 Ticket cerrado`,
-      files: [{
-        attachment: Buffer.from(transcriptContent, 'utf-8'),
-        name: `transcript-${interaction.channel.name}.txt`
-      }]
-    });
+    if (!logChannel) {
+      console.log("❌ Canal logs NO encontrado:", config.logChannelId);
+    } else {
+      await logChannel.send({
+        content: `🔴 Ticket cerrado`,
+        files: [{
+          attachment: Buffer.from(transcriptContent, 'utf-8'),
+          name: `transcript-${interaction.channel.name}.txt`
+        }]
+      });
+    }
+
+    ticketOwners.delete(interaction.channel.id);
+
+    setTimeout(() => {
+      interaction.channel.delete().catch(console.error);
+    }, 3000);
   }
-
-  ticketOwners.delete(interaction.channel.id);
-
-  setTimeout(() => {
-    interaction.channel.delete().catch(console.error);
-  }, 3000);
-}
 });
 
 client.login(process.env.TOKEN);
