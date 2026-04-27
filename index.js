@@ -45,11 +45,11 @@ const roles = {
 };
 
 const posicionesRoles = {
-  "Izquierda": roles['⬅️'],
-  "Hold Derecha": roles['➡️'],
-  "Piazza": roles['🏛️'],
-  "Push": roles['⚡'],
-  "Hold Medio": roles['🎯']
+  "⬅️ Izquierda": roles['⬅️'],
+  "➡️ Hold Derecha": roles['➡️'],
+  "🏛️ Piazza": roles['🏛️'],
+  "⚡ Push": roles['⚡'],
+  "🎯 Hold Medio": roles['🎯']
 };
 
 // ================= READY =================
@@ -80,7 +80,7 @@ client.on('messageCreate', async (message) => {
     return message.channel.send({ embeds: [embed], components: [row] });
   }
 
-  // POSIS
+  // POSIS (embed bonito)
   if (message.content === '!posis') {
     if (message.channel.id !== config.posis.channelId) {
       const aviso = await message.reply('❌ Canal incorrecto.');
@@ -91,15 +91,19 @@ client.on('messageCreate', async (message) => {
       return;
     }
 
-    const msg = await message.channel.send(
-`📌 **Selecciona tu posición**
+    const embed = new EmbedBuilder()
+      .setTitle('📌 Selecciona tu posición')
+      .setDescription(
+`⬅️ **Izquierda**
+➡️ **Hold Derecha**
+🏛️ **Piazza**
+⚡ **Push**
+🎯 **Hold Medio**`
+      )
+      .setColor(0x000000)
+      .setFooter({ text: 'Reacciona para elegir tus roles' });
 
-⬅️ Izquierda  
-➡️ Hold Derecha  
-🏛️ Piazza  
-⚡ Push  
-🎯 Hold Medio`
-);
+    const msg = await message.channel.send({ embeds: [embed] });
 
     for (const emoji of Object.keys(roles)) {
       await msg.react(emoji);
@@ -139,7 +143,6 @@ client.on('messageCreate', async (message) => {
 
 // ================= AUTOROLES =================
 
-// ➕ Añadir rol (permite múltiples)
 client.on('messageReactionAdd', async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) await reaction.fetch();
@@ -156,7 +159,6 @@ client.on('messageReactionAdd', async (reaction, user) => {
   }
 });
 
-// ➖ Quitar rol
 client.on('messageReactionRemove', async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) await reaction.fetch();
@@ -231,36 +233,52 @@ client.on('interactionCreate', async (interaction) => {
   }
 
   // CERRAR
-  if (interaction.customId === 'cerrar_ticket') {
+if (interaction.customId === 'cerrar_ticket') {
 
-    await interaction.reply('Cerrando ticket...');
+  await interaction.reply('Cerrando ticket...');
 
-    const messages = await interaction.channel.messages.fetch({ limit: 100 });
+  const messages = await interaction.channel.messages.fetch({ limit: 100 });
 
-    const ownerId = ticketOwners.get(interaction.channel.id);
-    const ownerUser = await client.users.fetch(ownerId).catch(() => null);
+  const ownerId = ticketOwners.get(interaction.channel.id);
+  const ownerUser = await client.users.fetch(ownerId).catch(() => null);
 
-    const transcript = [
-      `👤 ${ownerUser?.tag}`,
-      `🔒 ${interaction.user.tag}`,
-      ...messages.reverse().map(m => `${m.author.tag}: ${m.content}`)
-    ].join('\n');
+  const transcript = [
+    `👤 Creador: ${ownerUser?.tag}`,
+    `🔒 Cerrado por: ${interaction.user.tag}`,
+    `💬 Mensajes: ${messages.size}`,
+    `📅 Fecha: ${new Date().toLocaleString()}`,
+    `=========================`,
+    ...messages.reverse().map(m => `${m.author.tag}: ${m.content}`)
+  ].join('\n');
 
-    if (logChannel) {
-      await logChannel.send({
-        files: [{
-          attachment: Buffer.from(transcript),
-          name: `transcript-${interaction.channel.name}.txt`
-        }]
-      });
-    }
+  // 🟣 EMBED BONITO
+  const embed = new EmbedBuilder()
+    .setTitle('🔴 Ticket Cerrado')
+    .addFields(
+      { name: '👤 Creador', value: ownerUser ? ownerUser.tag : 'Desconocido', inline: true },
+      { name: '🔒 Cerrado por', value: interaction.user.tag, inline: true },
+      { name: '💬 Mensajes', value: `${messages.size}`, inline: true }
+    )
+    .setFooter({ text: `Canal: ${interaction.channel.name}` })
+    .setTimestamp()
+    .setColor(0xff0000);
 
-    ticketOwners.delete(interaction.channel.id);
-
-    setTimeout(() => {
-      interaction.channel.delete().catch(console.error);
-    }, 3000);
+  if (logChannel) {
+    await logChannel.send({
+      embeds: [embed],
+      files: [{
+        attachment: Buffer.from(transcript),
+        name: `transcript-${interaction.channel.name}.txt`
+      }]
+    });
   }
+
+  ticketOwners.delete(interaction.channel.id);
+
+  setTimeout(() => {
+    interaction.channel.delete().catch(console.error);
+  }, 3000);
+}
 });
 
 client.login(process.env.TOKEN);
