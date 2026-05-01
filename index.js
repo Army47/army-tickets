@@ -27,7 +27,8 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageReactions
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildMembers // 👈 IMPORTANTE
   ],
   partials: [Partials.Channel, Partials.Message, Partials.Reaction]
 });
@@ -54,8 +55,37 @@ const posicionesRoles = {
 
 // ================= READY =================
 
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`✅ Bot listo como ${client.user.tag}`);
+
+  try {
+    const guild = client.guilds.cache.first();
+    const channel = await guild.channels.fetch(config.posis.channelId);
+    const message = await channel.messages.fetch(config.posis.messageId);
+
+    if (!message) return;
+
+    for (const reaction of message.reactions.cache.values()) {
+      const roleId = roles[reaction.emoji.name];
+      if (!roleId) continue;
+
+      const users = await reaction.users.fetch();
+
+      for (const user of users.values()) {
+        if (user.bot) continue;
+
+        const member = await guild.members.fetch(user.id);
+
+        if (!member.roles.cache.has(roleId)) {
+          await member.roles.add(roleId).catch(() => {});
+        }
+      }
+    }
+
+    console.log('✅ Autoroles sincronizados correctamente');
+  } catch (err) {
+    console.log('❌ Error autoroles:', err.message);
+  }
 });
 
 // ================= COMANDOS =================
@@ -197,16 +227,26 @@ client.on('interactionCreate', async (interaction) => {
       name: `🎫-${interaction.user.username}`,
       type: ChannelType.GuildText,
       parent: config.id_categoria,
-      permissionOverwrites: [
-        { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-        {
-          id: interaction.user.id,
-          allow: [
-            PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages
-          ]
-        }
-      ]
+     permissionOverwrites: [
+  {
+    id: interaction.guild.id,
+    deny: [PermissionsBitField.Flags.ViewChannel]
+  },
+  {
+    id: interaction.user.id,
+    allow: [
+      PermissionsBitField.Flags.ViewChannel,
+      PermissionsBitField.Flags.SendMessages
+    ]
+  },
+  {
+    id: config.staffRoleId, // 👈 STAFF
+    allow: [
+      PermissionsBitField.Flags.ViewChannel,
+      PermissionsBitField.Flags.SendMessages
+    ]
+  }
+]
     });
 
     ticketOwners.set(channel.id, interaction.user.id);
@@ -235,6 +275,18 @@ client.on('interactionCreate', async (interaction) => {
   // CERRAR
 if (interaction.customId === 'cerrar_ticket') {
 
+  // 🔒 PERMISOS (AQUÍ VA)
+  if (
+    interaction.user.id !== ticketOwners.get(interaction.channel.id) &&
+    !interaction.member.roles.cache.has(config.staffRoleId)
+  ) {
+    return interaction.reply({
+      content: '❌ No puedes cerrar este ticket.',
+      ephemeral: true
+    });
+  }
+
+  // 👇 TU CÓDIGO SIGUE NORMAL
   await interaction.reply('Cerrando ticket...');
 
   const messages = await interaction.channel.messages.fetch({ limit: 100 });
@@ -279,6 +331,42 @@ if (interaction.customId === 'cerrar_ticket') {
     interaction.channel.delete().catch(console.error);
   }, 3000);
 }
+});
+
+// ================= AUTO BORRAR TICKET SI USUARIO SALE =================
+
+client.on('guildMemberRemove', async (member) => {
+  const guild = member.guild;
+
+  const tickets = guild.channels.cache.filter(c =>
+    c.name.startsWith('🎫-')
+  );
+
+  for (const channel of tickets.values()) {
+
+    if (channel.name === `🎫-${member.user.username}`) {
+
+      console.log(`🗑️ Ticket eliminado automáticamente de ${member.user.tag}`);
+
+      const logChannel = guild.channels.cache.get(config.logChannelId);
+
+      const embed = new EmbedBuilder()
+        .setTitle('⚠️ Ticket eliminado automáticamente')
+        .setDescription(`El usuario ${member.user.tag} salió del servidor.`)
+        .addFields(
+          { name: '📁 Canal', value: channel.name, inline: true }
+        )
+        .setColor(0xffa500)
+        .setTimestamp();
+
+      if (logChannel) {
+        logChannel.send({ embeds: [embed] });
+      }
+
+      channel.delete().catch(console.error);
+      ticketOwners.delete(channel.id);
+    }
+  }
 });
 
 client.login(process.env.TOKEN);

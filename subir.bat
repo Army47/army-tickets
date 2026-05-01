@@ -6,9 +6,15 @@ echo Subiendo a GitHub...
 echo =========================
 
 git add .
-git commit -m "auto update"
-git push
 
-echo =========================
-echo SUBIDO ✅
+git diff --cached --quiet
+if %errorlevel%==0 (
+    echo No hay cambios para subir ❌
+) else (
+    git commit -m "update %date% %time%"
+    git push
+    echo =========================
+    echo SUBIDO CORRECTAMENTE ✅
+)
+
 pause
