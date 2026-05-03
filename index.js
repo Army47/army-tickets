@@ -261,7 +261,8 @@ client.on('interactionCreate', async (interaction) => {
     const embed = new EmbedBuilder()
       .setTitle('🎫 Ticket Abierto')
       .setDescription(config.ticket.mensaje)
-      .setColor(0x000000);
+      .setColor(0x000000)
+      .setFooter({ text: '⚔️ Army Tickets System' });
 
     await channel.send({
       content: `👋 ${interaction.user}`,
