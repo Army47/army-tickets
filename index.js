@@ -98,7 +98,8 @@ client.on('messageCreate', async (message) => {
     const embed = new EmbedBuilder()
       .setTitle('**FORZA COMMUNITY**')
       .setImage('https://media.discordapp.net/attachments/1483568796013953175/1492216666690687057/image0.jpg')
-      .setColor(0x000000);
+      .setColor(0x000000)
+      .setFooter({ text: '⚔️ Army Tickets System' });
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -131,7 +132,7 @@ client.on('messageCreate', async (message) => {
 🎯 **Hold Medio**`
       )
       .setColor(0x000000)
-      .setFooter({ text: 'Reacciona para elegir tus roles' });
+      .setFooter({ text: '⚔️ Army AutoRol System' });
 
     const msg = await message.channel.send({ embeds: [embed] });
 
